@@ -1,11 +1,8 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven'
-    }
-
     environment {
+        MAVEN_HOME = '/usr/bin'
         SONAR_TOKEN = credentials('jenkins')
         DOCKER_HUB_USER = 'hamza2011'
         DOCKER_IMAGE = 'springboot_devops'
