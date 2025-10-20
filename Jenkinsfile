@@ -39,37 +39,27 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    try {
-                        withSonarQubeEnv('sonarqube') {
-                            sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
-                        }
-                        echo '✅ SonarQube analysis completed successfully!'
-                    } catch (err) {
-                        echo "⚠️ SonarQube analysis failed: ${err}"
-                    }
+                withSonarQubeEnv('sonarqube') {
+                    sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
                 }
+                echo '✅ SonarQube analysis completed successfully!'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest ."
-                    echo '✅ Docker image built successfully!'
-                }
+                sh "docker build -t ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest ."
+                echo '✅ Docker image built successfully!'
             }
         }
 
         stage('Push Docker Image to DockerHub') {
             steps {
-                script {
-                    withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
-                        sh "echo $DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin"
-                    }
-                    sh "docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
-                    echo '✅ Docker image pushed to DockerHub successfully!'
+                withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
+                    sh "echo $DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin"
                 }
+                sh "docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
+                echo '✅ Docker image pushed to DockerHub successfully!'
             }
         }
     }
@@ -82,7 +72,8 @@ pipeline {
             echo '❌ Pipeline failed!'
         }
         always {
-            script {
+            node { // 🔹 important: for sh context
+                echo '🧹 Cleaning up...'
                 sh 'docker logout || true'
             }
         }
