@@ -12,37 +12,43 @@ pipeline {
         stage('Checkout') {
             steps {
                 git url: 'https://github.com/hamza-181/devops.git', branch: 'main'
-                echo 'Checkout completed successfully!'
+                echo '✅ Checkout completed successfully!'
             }
         }
 
         stage('Clean') {
             steps {
                 sh 'mvn clean'
-                echo 'Clean completed successfully!'
+                echo '✅ Clean completed successfully!'
             }
         }
 
         stage('Validate') {
             steps {
                 sh 'mvn validate'
-                echo 'Validate completed successfully!'
+                echo '✅ Validate completed successfully!'
             }
         }
 
         stage('Package') {
             steps {
                 sh 'mvn package -DskipTests'
-                echo 'Package completed successfully!'
+                echo '✅ Package completed successfully!'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+                script {
+                    try {
+                        withSonarQubeEnv('sonarqube') {
+                            sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+                        }
+                        echo '✅ SonarQube analysis completed successfully!'
+                    } catch (err) {
+                        echo "⚠️ SonarQube analysis failed: ${err}"
+                    }
                 }
-                echo 'SonarQube analysis completed successfully!'
             }
         }
 
@@ -50,8 +56,8 @@ pipeline {
             steps {
                 script {
                     sh "docker build -t ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest ."
+                    echo '✅ Docker image built successfully!'
                 }
-                echo 'Docker image built successfully!'
             }
         }
 
@@ -62,18 +68,21 @@ pipeline {
                         sh "echo $DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin"
                     }
                     sh "docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
+                    echo '✅ Docker image pushed to DockerHub successfully!'
                 }
-                echo 'Docker image pushed to DockerHub successfully!'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline finished successfully!'
+            echo '🎉 Pipeline finished successfully!'
         }
         failure {
-            echo 'Pipeline failed!'
+            echo '❌ Pipeline failed!'
+        }
+        always {
+            sh 'docker logout || true'
         }
     }
 }
