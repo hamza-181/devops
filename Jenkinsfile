@@ -39,7 +39,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('MySonarServer') {
+                withSonarQubeEnv('sonarqube') {
                     sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
                 }
                 echo 'SonarQube analysis completed successfully!'
