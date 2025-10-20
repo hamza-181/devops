@@ -20,17 +20,12 @@ pipeline {
                 sh '''
                 docker rm -f mysql-test || true
                 docker run -d --name mysql-test -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=studentdb -p 3306:3306 mysql:8.0 --default-authentication-plugin=mysql_native_password
-
-                # Attendre MySQL
                 until docker exec mysql-test mysql -uroot -proot -e "SELECT 1"; do
-                  echo "Waiting for MySQL..."
                   sleep 5
                 done
-                echo "✅ MySQL is ready!"
                 '''
             }
         }
-
 
         stage('Build with Maven') {
             steps {
@@ -72,7 +67,6 @@ pipeline {
 
     post {
         always {
-            echo "Cleaning up..."
             sh 'docker rm -f mysql-test || true'
         }
     }
