@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         MAVEN_HOME = '/usr/bin'
-        SONAR_TOKEN = credentials('jenkins')
+        SONAR_TOKEN = credentials('sonar-token')
         DOCKER_HUB_USER = 'hamza2011'
         DOCKER_IMAGE = 'springboot_devops'
     }
