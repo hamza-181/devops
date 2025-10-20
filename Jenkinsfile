@@ -72,10 +72,7 @@ pipeline {
             echo '❌ Pipeline failed!'
         }
         always {
-            node { // 🔹 important: for sh context
-                echo '🧹 Cleaning up...'
-                sh 'docker logout || true'
-            }
+            echo '🧹 Pipeline finished, cleanup if needed (docker logout skipped to avoid errors)'
         }
     }
 }
