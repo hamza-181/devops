@@ -20,13 +20,23 @@ pipeline {
                 script {
                     sh 'docker rm -f mysql-test || true'
                     sh '''
-                        docker run -d --name mysql-test \
-                          -e MYSQL_ROOT_PASSWORD=root \
-                          -e MYSQL_DATABASE=studentdb \
-                          -p 3306:3306 \
-                          mysql:8.0 --default-authentication-plugin=mysql_native_password
+                    echo "Starting MySQL container..."
+                    docker run -d --name mysql-test \
+                      -e MYSQL_ROOT_PASSWORD=root \
+                      -e MYSQL_DATABASE=studentdb \
+                      -p 3306:3306 \
+                      mysql:8.0 --default-authentication-plugin=mysql_native_password
+
+                    echo "Waiting for MySQL to be ready..."
+                    for i in {1..20}; do
+                      if docker exec mysql-test mysql -uroot -proot -e "SELECT 1" &>/dev/null; then
+                        echo "✅ MySQL is ready!"
+                        break
+                      fi
+                      echo "⏳ Waiting for MySQL ($i/20)..."
+                      sleep 3
+                    done
                     '''
-                    sh 'sleep 25'
                 }
             }
         }
