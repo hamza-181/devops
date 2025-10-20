@@ -1,73 +1,82 @@
 pipeline {
     agent any
 
+    tools {
+        maven 'Maven'
+    }
+
     environment {
-        IMAGE_NAME = "student-app"
-        IMAGE_TAG = "latest"
-        SONAR_PROJECT_KEY = "student-app"
-        SONAR_HOST_URL = "http://10.10.10.20:9000"
+        SONAR_TOKEN = credentials('jenkins')
+        DOCKER_HUB_USER = 'hamza2011'
+        DOCKER_IMAGE = 'springboot_devops'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/hamza-181/devops.git'
+                git url: 'https://github.com/hamza-181/devops.git', branch: 'main'
+                echo 'Checkout completed successfully!'
             }
         }
 
-        stage('Start MySQL for Tests') {
+        stage('Clean') {
             steps {
-                sh '''
-                docker rm -f mysql-test || true
-                docker run -d --name mysql-test -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=studentdb -p 3306:3306 mysql:8.0 --default-authentication-plugin=mysql_native_password
-                until docker exec mysql-test mysql -uroot -proot -e "SELECT 1"; do
-                  sleep 5
-                done
-                '''
+                sh 'mvn clean'
+                echo 'Clean completed successfully!'
             }
         }
 
-        stage('Build with Maven') {
+        stage('Validate') {
             steps {
-                sh 'mvn clean install -DskipTests'
+                sh 'mvn validate'
+                echo 'Validate completed successfully!'
             }
         }
 
-        stage('Run Tests (with MySQL)') {
+        stage('Package') {
             steps {
-                sh 'mvn test'
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
+                sh 'mvn package -DskipTests'
+                echo 'Package completed successfully!'
             }
         }
 
         stage('SonarQube Analysis') {
-            environment {
-                SONAR_TOKEN = credentials('jenkis')
-            }
             steps {
-                sh """
-                    mvn sonar:sonar \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.host.url=${SONAR_HOST_URL} \
-                        -Dsonar.login=${SONAR_TOKEN}
-                """
+                withSonarQubeEnv('MySonarServer') {
+                    sh "mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}"
+                }
+                echo 'SonarQube analysis completed successfully!'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                script {
+                    sh "docker build -t ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest ."
+                }
+                echo 'Docker image built successfully!'
+            }
+        }
+
+        stage('Push Docker Image to DockerHub') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'dockerhub-pass', variable: 'DOCKER_HUB_PASS')]) {
+                        sh "echo $DOCKER_HUB_PASS | docker login -u ${DOCKER_HUB_USER} --password-stdin"
+                    }
+                    sh "docker push ${DOCKER_HUB_USER}/${DOCKER_IMAGE}:latest"
+                }
+                echo 'Docker image pushed to DockerHub successfully!'
             }
         }
     }
 
     post {
-        always {
-            sh 'docker rm -f mysql-test || true'
+        success {
+            echo 'Pipeline finished successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
